@@ -1,25 +1,30 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from Questgen import main
 
-# Load T5 model
-tokenizer = AutoTokenizer.from_pretrained("t5-base")
-model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
+qe = main.BoolQGen()
+mcq = main.MCQGen()
 
 def generate_questions(contexts, num_questions=5):
     """
-    Generate questions using T5 with instruction prompts.
+    Generate mixed-style questions (boolean + MCQ) from contexts.
     """
-    prompts = []
-    for ctx in contexts:
-        # Limit context length
-        trimmed_ctx = " ".join(ctx.strip().split()[:60])
-        prompt = f"Generate a question based on the following passage: {trimmed_ctx}"
-        prompts.append(prompt)
+    text = " ".join(contexts)
+    # Generate boolean (Yes/No) questions
+    bool_output = qe.predict_boolq({"input_text": text})
+    # Generate MCQs
+    mcq_output = mcq.predict_mcq({"input_text": text})
 
-    prompts = prompts[:num_questions]
+    questions = []
+    for q in bool_output.get("Boolean Questions", []):
+        questions.append(q)
+        if len(questions) >= num_questions: break
 
-    # Tokenize
-    inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
-    outputs = model.generate(**inputs, max_length=64)
+    for qdict in mcq_output.get("questions", []):
+        qtext = qdict.get("question")
+        questions.append(qtext)
+        if len(questions) >= num_questions: break
 
-    # ✅ THIS is what you must return
-    return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+    # Fallback: simple sentence prompts if not enough
+    while len(questions) < num_questions:
+        questions.append("Explain the concept: " + contexts[0][:50] + "...")
+
+    return questions[:num_questions]
