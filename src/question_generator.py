@@ -1,7 +1,7 @@
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained("flan-t5-small")
-model = AutoModelForSeq2SeqLM.from_pretrained("flan-t5-small")
+tokenizer = AutoTokenizer.from_pretrained("t5-small")
+model = AutoModelForSeq2SeqLM.from_pretrained("t5-small")
 
 def generate_questions(contexts, num_questions=5):
     inputs = [
