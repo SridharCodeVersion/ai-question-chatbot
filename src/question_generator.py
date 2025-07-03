@@ -5,26 +5,28 @@ tokenizer = AutoTokenizer.from_pretrained("valhalla/t5-small-qg-hl")
 model = AutoModelForSeq2SeqLM.from_pretrained("valhalla/t5-small-qg-hl")
 
 def generate_questions(contexts, num_questions=5):
-    """
-    Generate meaningful questions using highlight-style prompts for each chunk.
-    """
     prompts = []
 
     for ctx in contexts:
-        # Split into sentences
+        # Break context into multiple sentences
         sentences = ctx.strip().split(". ")
         for sentence in sentences:
-            sentence = sentence.strip()
-            if len(sentence.split()) >= 6 and len(prompts) < num_questions:
-                words = sentence.split()
-                # Add <hl> highlight tags
-                highlighted = f"<hl> {' '.join(words[:5])} <hl> {' '.join(words[5:])}"
-                prompt = f"generate question: {highlighted}"
-                prompts.append(prompt)
-        if len(prompts) >= num_questions:
+            sentence = sentence.strip().replace("\n", " ")
+            if len(sentence.split()) < 6:
+                continue
+            words = sentence.split()
+            # Highlight the first 4-5 words
+            highlighted = f"<hl> {' '.join(words[:5])} <hl> {' '.join(words[5:])}"
+            prompt = f"generate question: {highlighted}"
+            prompts.append(prompt)
+            if len(prompts) == num_questions:
+                break
+        if len(prompts) == num_questions:
             break
 
-    # Tokenize and generate
+    # Tokenize and generate questions
     inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
     outputs = model.generate(**inputs, max_length=64)
-    return [tokenizer.decode(out, skip_special_tokens=True) for out in outputs]
+
+    # Decode results
+    return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
