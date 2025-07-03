@@ -1,32 +1,23 @@
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-# Load fine-tuned question generation model
-tokenizer = AutoTokenizer.from_pretrained("valhalla/t5-small-qg-hl")
-model = AutoModelForSeq2SeqLM.from_pretrained("valhalla/t5-small-qg-hl")
+tokenizer = AutoTokenizer.from_pretrained("t5-base")
+model = AutoModelForSeq2SeqLM.from_pretrained("t5-base")
 
 def generate_questions(contexts, num_questions=5):
+    """
+    Generate questions using general-purpose T5 model with prompt engineering.
+    """
     prompts = []
-
     for ctx in contexts:
-        # Break context into multiple sentences
-        sentences = ctx.strip().split(". ")
-        for sentence in sentences:
-            sentence = sentence.strip().replace("\n", " ")
-            if len(sentence.split()) < 6:
-                continue
-            words = sentence.split()
-            # Highlight the first 4-5 words
-            highlighted = f"<hl> {' '.join(words[:5])} <hl> {' '.join(words[5:])}"
-            prompt = f"generate question: {highlighted}"
-            prompts.append(prompt)
-            if len(prompts) == num_questions:
-                break
-        if len(prompts) == num_questions:
-            break
+        # Use instruction format T5 understands well
+        prompts.append(f"Generate a question based on the following passage:\n{ctx.strip()}")
 
-    # Tokenize and generate questions
+    # Truncate to the requested number of questions
+    prompts = prompts[:num_questions]
+
+    # Tokenize prompts
     inputs = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
     outputs = model.generate(**inputs, max_length=64)
 
-    # Decode results
+    # Decode and return generated questions
     return [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
