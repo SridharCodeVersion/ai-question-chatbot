@@ -22,4 +22,10 @@ def build_index(chunks):
 def retrieve(chunks, index, embeddings, query, top_k=5):
     q_emb = model.encode([query])
     dists, ids = index.search(q_emb, top_k)
-    return [chunks[i] for i in ids[0]]
+    seen = set()
+unique_chunks = []
+for i in ids[0]:
+    if chunks[i] not in seen:
+        unique_chunks.append(chunks[i])
+        seen.add(chunks[i])
+return unique_chunks
